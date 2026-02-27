@@ -100,6 +100,57 @@
       color:#444;
       font-size: 13px;
     }
+
+    /* ===== MODO APP (PANEL PLEGABLE) ===== */
+    .toggleBtn{
+      display:none;           /* solo en celular */
+      width:100%;
+      margin-bottom:8px;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid #ddd;
+      background:#fff;
+      font-size:16px;
+      cursor:pointer;
+    }
+
+    @media (max-width: 900px){
+      body{ padding:10px; }
+
+      .layout{
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .toggleBtn{ display:block; }
+
+      /* panel oculto por defecto en celular */
+      #sidePanel{ display:none; }
+
+      /* cuando está abierto */
+      #sidePanel.open{ display:block; }
+
+      /* plano más alto (tipo app) */
+      #box{
+        height: 62vh;
+        min-height: 360px;
+        max-height: 600px;
+      }
+
+      .btn{
+        padding: 14px;
+        border-radius: 14px;
+      }
+      .icon{
+        width: 64px;
+        height: 52px;
+      }
+      button{
+        padding: 12px 14px;
+        font-size: 16px;
+      }
+      .eqBig{ font-size: 26px; }
+    }
   </style>
 </head>
 
@@ -108,14 +159,14 @@
 
   <div class="layout">
     <!-- PANEL IZQUIERDO: SOLO GRÁFICAS (SIN FUNCIÓN) -->
-    <div class="panel">
+    <div class="panel" id="sidePanel">
       <b>Selecciona una gráfica</b>
       <div class="small">Da clic en la que creas que corresponde a la ecuación.</div>
 
       <div class="thumb">
         <div class="btn" data-kind="x2" id="btn-x2">
           <div class="icon">
-            <svg width="46" height="30" viewBox="0 0 46 30">
+            <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M6 26 Q23 2 40 26" fill="none" stroke="#111" stroke-width="2"/>
             </svg>
           </div>
@@ -124,7 +175,7 @@
 
         <div class="btn" data-kind="x3" id="btn-x3">
           <div class="icon">
-            <svg width="46" height="30" viewBox="0 0 46 30">
+            <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M6 24 C14 24 16 6 23 6 C30 6 32 24 40 24" fill="none" stroke="#111" stroke-width="2"/>
             </svg>
           </div>
@@ -133,7 +184,7 @@
 
         <div class="btn" data-kind="inv" id="btn-inv">
           <div class="icon">
-            <svg width="46" height="30" viewBox="0 0 46 30">
+            <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M7 7 C14 10 16 16 18 23" fill="none" stroke="#111" stroke-width="2"/>
               <path d="M39 23 C32 20 30 14 28 7" fill="none" stroke="#111" stroke-width="2"/>
             </svg>
@@ -143,7 +194,7 @@
 
         <div class="btn" data-kind="sqrt" id="btn-sqrt">
           <div class="icon">
-            <svg width="46" height="30" viewBox="0 0 46 30">
+            <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M6 22 L14 22 L18 26 L22 10 L40 10" fill="none" stroke="#111" stroke-width="2"/>
               <path d="M22 10 C26 8 30 7 40 6" fill="none" stroke="#111" stroke-width="2"/>
             </svg>
@@ -153,7 +204,7 @@
 
         <div class="btn" data-kind="abs" id="btn-abs">
           <div class="icon">
-            <svg width="46" height="30" viewBox="0 0 46 30">
+            <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M6 24 L23 8 L40 24" fill="none" stroke="#111" stroke-width="2"/>
             </svg>
           </div>
@@ -167,9 +218,9 @@
       </div>
 
       <div class="row">
-        <button id="new">Nuevo ejercicio</button>
-        <button id="reset">Reiniciar</button>
-        <button id="check">Calificar</button>
+        <button id="new" type="button">Nuevo ejercicio</button>
+        <button id="reset" type="button">Reiniciar</button>
+        <button id="check" type="button">Calificar</button>
       </div>
 
       <div class="hint">
@@ -182,6 +233,9 @@
 
     <!-- COLUMNA PRINCIPAL -->
     <div class="mainCol">
+      <!-- Botón visible solo en celular -->
+      <button id="togglePanel" class="toggleBtn" type="button">📌 Elegir gráfica / Controles</button>
+
       <div id="box"></div>
 
       <div class="equationWrap">
@@ -201,7 +255,7 @@
   const FIXED_BB = [-10, 10, 10, -10];
   const boxEl = document.getElementById('box');
 
-  // Bloquea wheel/touch para evitar zoom del navegador
+  // Evita zoom scroll del navegador dentro del plano
   boxEl.addEventListener('wheel', (e) => e.preventDefault(), { passive:false });
   boxEl.addEventListener('touchmove', (e) => e.preventDefault(), { passive:false });
 
@@ -332,9 +386,7 @@
 
   // ========= LaTeX (MathJax) =========
   function buildEquationLatex(kind,h,k,fx,fy){
-    // (x-h) con signo bonito
     const inner = (h === 0) ? "x" : (h > 0 ? `(x-${h})` : `(x+${Math.abs(h)})`);
-    // reflejo en Y: f(-(x-h)) lo mostramos como -(x-h) dentro
     const inside = fy ? `-\\left(${inner}\\right)` : `${inner}`;
 
     let base = "";
@@ -345,7 +397,6 @@
     if (kind==="abs") base = `\\left|${inside}\\right|`;
 
     let expr = fx ? `-\\left(${base}\\right)` : base;
-
     if (k !== 0) expr += (k > 0 ? `+${k}` : `${k}`);
 
     return `\\( y = ${expr} \\)`;
@@ -354,7 +405,7 @@
   function renderLatexEquation(){
     const eqDiv = document.getElementById("eqBig");
     eqDiv.innerHTML = buildEquationLatex(targetKind, targetH, targetK, targetFlipX, targetFlipY);
-    // render MathJax
+
     if (window.MathJax && MathJax.typesetPromise) {
       MathJax.typesetPromise([eqDiv]);
     }
@@ -370,9 +421,6 @@
     targetK = randInt(-5,5);
     targetFlipX = Math.random() < 0.5;
     targetFlipY = Math.random() < 0.5;
-
-    // Si quieres evitar ejercicios raros de raíz con reflejo en Y, descomenta:
-    // if (targetKind === "sqrt") targetFlipY = false;
 
     renderLatexEquation();
 
@@ -438,16 +486,61 @@
       resetStudent();
       renderCurve();
       setMsg("Listo. Ahora aplica traslación (h,k) y reflexiones.", "");
+
+      // En celular: al elegir la familia, cerramos el panel para volver al plano
+      if (window.matchMedia("(max-width: 900px)").matches) {
+        sidePanel.classList.remove("open");
+        setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 50);
+      }
     });
   });
 
   document.getElementById("reset").addEventListener("click", resetStudent);
-  document.getElementById("new").addEventListener("click", newExercise);
+  document.getElementById("new").addEventListener("click", () => {
+    newExercise();
+    // En celular: al crear ejercicio, cierra panel (modo app)
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      sidePanel.classList.remove("open");
+      setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 50);
+    }
+  });
 
   document.getElementById("flipX").addEventListener("change", () => { renderCurve(); lockView(); });
   document.getElementById("flipY").addEventListener("change", () => { renderCurve(); lockView(); });
 
+  // ========= MODO APP (PANEL PLEGABLE) =========
+  const toggleBtn = document.getElementById("togglePanel");
+  const sidePanel = document.getElementById("sidePanel");
+
+  function isMobile() {
+    return window.matchMedia("(max-width: 900px)").matches;
+  }
+
+  function syncPanel() {
+    if (isMobile()) {
+      toggleBtn.style.display = "block";
+      sidePanel.classList.remove("open"); // cerrado por defecto en celular
+    } else {
+      toggleBtn.style.display = "none";
+      sidePanel.classList.add("open");    // siempre visible en escritorio
+    }
+
+    setTimeout(() => {
+      try { lockView(); board.update(); } catch(e) {}
+    }, 50);
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    sidePanel.classList.toggle("open");
+    setTimeout(() => {
+      try { lockView(); board.update(); } catch(e) {}
+    }, 50);
+  });
+
+  window.addEventListener("resize", syncPanel);
+
   // ========= ARRANQUE =========
+  syncPanel();
   newExercise();
 </script>
 </body>
