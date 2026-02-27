@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Transformaciones: elige la gráfica y muévela</title>
+
+  <!-- JSXGraph -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
+
+  <!-- MathJax (LaTeX real) -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 14px; }
+    h2 { margin: 0 0 10px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    #box {
+      width: 100%;
+      height: 620px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background: #fff;
+      touch-action: none;
+      overflow: hidden;
+    }
+
+    .thumb { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+      background: #fff;
+      transition: transform .05s ease;
+    }
+    .btn:active { transform: scale(0.99); }
+    .btn.selected { border-color: #2b6cb0; box-shadow: 0 0 0 2px rgba(43,108,176,.15); }
+
+    .icon {
+      width: 58px; height: 44px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: #fafafa;
+      flex: 0 0 auto;
+    }
+
+    .row { margin-top: 10px; display:flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    button { padding: 10px 14px; font-size: 16px; cursor: pointer; border-radius: 10px; border: 1px solid #ddd; background:#fff; }
+    label { user-select:none; }
+    .hint { margin-top: 8px; color:#444; font-size: 13px; }
+    .msg { margin-top: 10px; font-weight: 700; }
+    .ok { color:#0a7a0a; }
+    .bad { color:#b00020; }
+    .small { font-size: 13px; color:#555; margin-top:6px; }
+
+    .mainCol{
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .equationWrap{
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+    }
+    .eqTitle{ font-weight: 700; margin-bottom: 6px; }
+    .eqBig{
+      font-size: 30px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+    .eqSub{
+      margin-top: 6px;
+      color:#444;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Transformaciones: elige la gráfica y muévela</h2>
+
+  <div class="layout">
+    <!-- PANEL IZQUIERDO: SOLO GRÁFICAS (SIN FUNCIÓN) -->
+    <div class="panel">
+      <b>Selecciona una gráfica</b>
+      <div class="small">Da clic en la que creas que corresponde a la ecuación.</div>
+
+      <div class="thumb">
+        <div class="btn" data-kind="x2" id="btn-x2">
+          <div class="icon">
+            <svg width="46" height="30" viewBox="0 0 46 30">
+              <path d="M6 26 Q23 2 40 26" fill="none" stroke="#111" stroke-width="2"/>
+            </svg>
+          </div>
+          <div><b>Parábola</b></div>
+        </div>
+
+        <div class="btn" data-kind="x3" id="btn-x3">
+          <div class="icon">
+            <svg width="46" height="30" viewBox="0 0 46 30">
+              <path d="M6 24 C14 24 16 6 23 6 C30 6 32 24 40 24" fill="none" stroke="#111" stroke-width="2"/>
+            </svg>
+          </div>
+          <div><b>Cúbica</b></div>
+        </div>
+
+        <div class="btn" data-kind="inv" id="btn-inv">
+          <div class="icon">
+            <svg width="46" height="30" viewBox="0 0 46 30">
+              <path d="M7 7 C14 10 16 16 18 23" fill="none" stroke="#111" stroke-width="2"/>
+              <path d="M39 23 C32 20 30 14 28 7" fill="none" stroke="#111" stroke-width="2"/>
+            </svg>
+          </div>
+          <div><b>Racional</b></div>
+        </div>
+
+        <div class="btn" data-kind="sqrt" id="btn-sqrt">
+          <div class="icon">
+            <svg width="46" height="30" viewBox="0 0 46 30">
+              <path d="M6 22 L14 22 L18 26 L22 10 L40 10" fill="none" stroke="#111" stroke-width="2"/>
+              <path d="M22 10 C26 8 30 7 40 6" fill="none" stroke="#111" stroke-width="2"/>
+            </svg>
+          </div>
+          <div><b>Raíz</b></div>
+        </div>
+
+        <div class="btn" data-kind="abs" id="btn-abs">
+          <div class="icon">
+            <svg width="46" height="30" viewBox="0 0 46 30">
+              <path d="M6 24 L23 8 L40 24" fill="none" stroke="#111" stroke-width="2"/>
+            </svg>
+          </div>
+          <div><b>Valor absoluto</b></div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:14px;">
+        <label><input type="checkbox" id="flipX"> Reflejar en eje X</label>
+        <label><input type="checkbox" id="flipY"> Reflejar en eje Y</label>
+      </div>
+
+      <div class="row">
+        <button id="new">Nuevo ejercicio</button>
+        <button id="reset">Reiniciar</button>
+        <button id="check">Calificar</button>
+      </div>
+
+      <div class="hint">
+        Arrastra el punto naranja (h,k) para mover la gráfica. <br/>
+        <b>Solo enteros</b>. Plano <b>fijo</b>.
+      </div>
+
+      <p id="result" class="msg"></p>
+    </div>
+
+    <!-- COLUMNA PRINCIPAL -->
+    <div class="mainCol">
+      <div id="box"></div>
+
+      <div class="equationWrap">
+        <div class="eqTitle">Ecuación del ejercicio:</div>
+        <div class="eqBig" id="eqBig">\( y = ? \)</div>
+        <div class="eqSub">Elige la familia correcta y aplica traslación (h,k) y reflexiones.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ========= OPCIONES GLOBALES para quitar barra/branding =========
+  JXG.Options.board.showNavigation = false;
+  JXG.Options.board.showCopyright = false;
+
+  // ========= TABLERO FIJO =========
+  const FIXED_BB = [-10, 10, 10, -10];
+  const boxEl = document.getElementById('box');
+
+  // Bloquea wheel/touch para evitar zoom del navegador
+  boxEl.addEventListener('wheel', (e) => e.preventDefault(), { passive:false });
+  boxEl.addEventListener('touchmove', (e) => e.preventDefault(), { passive:false });
+
+  const board = JXG.JSXGraph.initBoard('box', {
+    boundingbox: FIXED_BB,
+    keepaspectratio: true,
+    axis: false,
+    grid: false,
+    pan: { enabled: false },
+    zoom: { enabled: false },
+    showNavigation: false,
+    showCopyright: false,
+    ignoreResize: true,
+    resize: { enabled: false }
+  });
+
+  function lockView() {
+    board.setBoundingBox(FIXED_BB, true);
+  }
+  board.on('update', lockView);
+  lockView();
+
+  // Ejes + ticks 1 en 1 + cuadrícula 1 en 1
+  board.suspendUpdate();
+  board.create('axis', [[0,0],[1,0]], {
+    ticks: { ticksDistance: 1, minorTicks: 0, drawLabels: true }
+  });
+  board.create('axis', [[0,0],[0,1]], {
+    ticks: { ticksDistance: 1, minorTicks: 0, drawLabels: true }
+  });
+  board.create('grid', [], { gridX: 1, gridY: 1 });
+  board.unsuspendUpdate();
+  lockView();
+  board.update();
+
+  // ========= BASES =========
+  function baseFunc(kind, x){
+    switch(kind){
+      case "x2": return x*x;
+      case "x3": return x*x*x;
+      case "inv": return 1/x;
+      case "sqrt": return Math.sqrt(x);
+      case "abs": return Math.abs(x);
+      default: return x*x;
+    }
+  }
+
+  // ========= ESTADO =========
+  let selectedKind = null;
+  let curve = null;
+
+  // Objetivo aleatorio
+  let targetKind = null;
+  let targetH = 0;
+  let targetK = 0;
+  let targetFlipX = false;
+  let targetFlipY = false;
+
+  // ========= HANDLE (h,k) SOLO ENTEROS =========
+  const handle = board.create('point', [0, 0], {
+    name: '',
+    size: 4,
+    strokeColor: '#d97706',
+    fillColor: '#d97706',
+    attractToGrid: true,
+    attractorDistance: 0.5
+  });
+
+  handle.on('drag', () => {
+    handle.moveTo([Math.round(handle.X()), Math.round(handle.Y())], 0);
+    lockView();
+    board.update();
+  });
+
+  board.create('text', [
+    () => handle.X() + 0.3,
+    () => handle.Y() + 0.6,
+    () => `h=${handle.X()}, k=${handle.Y()}`
+  ], { fontSize: 14 });
+
+  // ========= g(x) DEL ALUMNO =========
+  function studentG(x){
+    if (!selectedKind) return NaN;
+
+    const flipX = document.getElementById("flipX").checked ? -1 : 1;
+    const flipY = document.getElementById("flipY").checked ? -1 : 1;
+    const h = handle.X();
+    const k = handle.Y();
+
+    const u = flipY * (x - h);
+    let y = baseFunc(selectedKind, u);
+    if (!Number.isFinite(y)) return NaN;
+
+    return flipX * y + k;
+  }
+
+  function renderCurve(){
+    if (curve) board.removeObject(curve);
+
+    if (!selectedKind){
+      curve = null;
+      lockView(); board.update();
+      return;
+    }
+
+    curve = board.create('functiongraph', [studentG, -10, 10], { strokeWidth: 3 });
+    lockView(); board.update();
+  }
+
+  function setMsg(text, cls){
+    const el = document.getElementById("result");
+    el.textContent = text;
+    el.className = "msg " + (cls || "");
+  }
+
+  function clearSelectionUI(){
+    document.querySelectorAll(".btn").forEach(b => b.classList.remove("selected"));
+  }
+
+  function resetStudent(){
+    handle.moveTo([0,0], 0);
+    document.getElementById("flipX").checked = false;
+    document.getElementById("flipY").checked = false;
+    setMsg("", "");
+    renderCurve();
+    lockView(); board.update();
+  }
+
+  // ========= LaTeX (MathJax) =========
+  function buildEquationLatex(kind,h,k,fx,fy){
+    // (x-h) con signo bonito
+    const inner = (h === 0) ? "x" : (h > 0 ? `(x-${h})` : `(x+${Math.abs(h)})`);
+    // reflejo en Y: f(-(x-h)) lo mostramos como -(x-h) dentro
+    const inside = fy ? `-\\left(${inner}\\right)` : `${inner}`;
+
+    let base = "";
+    if (kind==="x2") base = `\\left(${inside}\\right)^{2}`;
+    if (kind==="x3") base = `\\left(${inside}\\right)^{3}`;
+    if (kind==="inv") base = `\\frac{1}{\\left(${inside}\\right)}`;
+    if (kind==="sqrt") base = `\\sqrt{\\left(${inside}\\right)}`;
+    if (kind==="abs") base = `\\left|${inside}\\right|`;
+
+    let expr = fx ? `-\\left(${base}\\right)` : base;
+
+    if (k !== 0) expr += (k > 0 ? `+${k}` : `${k}`);
+
+    return `\\( y = ${expr} \\)`;
+  }
+
+  function renderLatexEquation(){
+    const eqDiv = document.getElementById("eqBig");
+    eqDiv.innerHTML = buildEquationLatex(targetKind, targetH, targetK, targetFlipX, targetFlipY);
+    // render MathJax
+    if (window.MathJax && MathJax.typesetPromise) {
+      MathJax.typesetPromise([eqDiv]);
+    }
+  }
+
+  // ========= EJERCICIO ALEATORIO =========
+  function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+  function newExercise(){
+    const kinds = ["x2","x3","inv","sqrt","abs"];
+    targetKind = kinds[randInt(0, kinds.length-1)];
+    targetH = randInt(-5,5);
+    targetK = randInt(-5,5);
+    targetFlipX = Math.random() < 0.5;
+    targetFlipY = Math.random() < 0.5;
+
+    // Si quieres evitar ejercicios raros de raíz con reflejo en Y, descomenta:
+    // if (targetKind === "sqrt") targetFlipY = false;
+
+    renderLatexEquation();
+
+    selectedKind = null;
+    clearSelectionUI();
+    resetStudent();
+    renderCurve();
+
+    setMsg("Nuevo ejercicio ✅ Elige la familia correcta y luego aplica (h,k) y reflexiones.", "");
+  }
+
+  // ========= OBJETIVO PARA CALIFICAR =========
+  function targetG(x){
+    const sx = targetFlipX ? -1 : 1;
+    const sy = targetFlipY ? -1 : 1;
+    const u = sy * (x - targetH);
+    let y = baseFunc(targetKind, u);
+    if (!Number.isFinite(y)) return NaN;
+    return sx * y + targetK;
+  }
+
+  // ========= CALIFICAR =========
+  document.getElementById("check").addEventListener("click", () => {
+    if (!selectedKind){
+      setMsg("❌ Primero elige una mini-gráfica del lado izquierdo.", "bad");
+      return;
+    }
+
+    if (selectedKind !== targetKind){
+      setMsg("❌ Incorrecto: elegiste la familia equivocada.", "bad");
+      return;
+    }
+
+    const testXs = [-6,-4,-3,-2,-1,1,2,3,4,6];
+    const tol = 1e-2;
+    let checked = 0;
+
+    for (const x of testXs){
+      const yS = studentG(x);
+      const yT = targetG(x);
+      if (!Number.isFinite(yS) || !Number.isFinite(yT)) continue;
+      checked++;
+      if (Math.abs(yS - yT) > tol){
+        setMsg("❌ Incorrecto: la transformación no coincide.", "bad");
+        return;
+      }
+    }
+
+    if (checked < 4){
+      setMsg("⚠️ Dominio complicado. Genera otro ejercicio.", "bad");
+      return;
+    }
+
+    setMsg("✅ Correcto.", "ok");
+  });
+
+  // ========= UI =========
+  document.querySelectorAll(".btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      clearSelectionUI();
+      btn.classList.add("selected");
+      selectedKind = btn.dataset.kind;
+      resetStudent();
+      renderCurve();
+      setMsg("Listo. Ahora aplica traslación (h,k) y reflexiones.", "");
+    });
+  });
+
+  document.getElementById("reset").addEventListener("click", resetStudent);
+  document.getElementById("new").addEventListener("click", newExercise);
+
+  document.getElementById("flipX").addEventListener("change", () => { renderCurve(); lockView(); });
+  document.getElementById("flipY").addEventListener("change", () => { renderCurve(); lockView(); });
+
+  // ========= ARRANQUE =========
+  newExercise();
+</script>
+</body>
+</html>
