@@ -101,17 +101,34 @@
       font-size: 13px;
     }
 
-    /* ===== MODO APP (PANEL PLEGABLE) ===== */
-    .toggleBtn{
+    /* ===== DRAWER (CELULAR) ===== */
+    .drawerBackdrop{
+      display:none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.25);
+      z-index: 9998;
+    }
+
+    .edgeSwipeZone{
+      display:none;
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 18px;          /* borde sensible para abrir */
+      height: 100dvh;
+      z-index: 9997;
+      background: transparent;
+    }
+
+    /* Manija visible */
+    .drawerHandle{
       display:none;           /* solo en celular */
-      width:100%;
-      margin-bottom:8px;
-      padding:12px 14px;
-      border-radius:12px;
-      border:1px solid #ddd;
-      background:#fff;
-      font-size:16px;
-      cursor:pointer;
+      width: 56px;
+      height: 6px;
+      border-radius: 999px;
+      margin: 6px auto 10px auto;
+      background: #d1d5db;
     }
 
     @media (max-width: 900px){
@@ -122,19 +139,36 @@
         gap: 10px;
       }
 
-      .toggleBtn{ display:block; }
+      .drawerBackdrop.show{ display:block; }
+      .edgeSwipeZone{ display:block; }
 
-      /* panel oculto por defecto en celular */
-      #sidePanel{ display:none; }
+      /* Panel como drawer fijo */
+      #sidePanel{
+        display:block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100dvh;
+        width: min(86vw, 340px);
+        overflow: auto;
+        z-index: 9999;
+        transform: translateX(-102%);     /* oculto fuera */
+        transition: transform 180ms ease;
+        border-radius: 0 14px 14px 0;
+        box-shadow: 0 10px 30px rgba(0,0,0,.18);
+      }
 
-      /* cuando está abierto */
-      #sidePanel.open{ display:block; }
+      #sidePanel.open{
+        transform: translateX(0);
+      }
 
-      /* plano más alto (tipo app) */
+      .drawerHandle{ display:block; }
+
+      /* Plano más alto tipo app */
       #box{
         height: 62vh;
         min-height: 360px;
-        max-height: 600px;
+        max-height: 650px;
       }
 
       .btn{
@@ -157,14 +191,20 @@
 <body>
   <h2>Transformaciones: elige la gráfica y muévela</h2>
 
+  <!-- Backdrop + borde para swipe -->
+  <div class="drawerBackdrop" id="drawerBackdrop"></div>
+  <div class="edgeSwipeZone" id="edgeSwipeZone"></div>
+
   <div class="layout">
-    <!-- PANEL IZQUIERDO: SOLO GRÁFICAS (SIN FUNCIÓN) -->
+    <!-- PANEL IZQUIERDO (DRAWER EN CELULAR) -->
     <div class="panel" id="sidePanel">
+      <div class="drawerHandle" aria-hidden="true"></div>
+
       <b>Selecciona una gráfica</b>
-      <div class="small">Da clic en la que creas que corresponde a la ecuación.</div>
+      <div class="small">Desliza desde el borde izquierdo para abrir/cerrar.</div>
 
       <div class="thumb">
-        <div class="btn" data-kind="x2" id="btn-x2">
+        <div class="btn" data-kind="x2">
           <div class="icon">
             <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M6 26 Q23 2 40 26" fill="none" stroke="#111" stroke-width="2"/>
@@ -173,7 +213,7 @@
           <div><b>Parábola</b></div>
         </div>
 
-        <div class="btn" data-kind="x3" id="btn-x3">
+        <div class="btn" data-kind="x3">
           <div class="icon">
             <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M6 24 C14 24 16 6 23 6 C30 6 32 24 40 24" fill="none" stroke="#111" stroke-width="2"/>
@@ -182,7 +222,7 @@
           <div><b>Cúbica</b></div>
         </div>
 
-        <div class="btn" data-kind="inv" id="btn-inv">
+        <div class="btn" data-kind="inv">
           <div class="icon">
             <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M7 7 C14 10 16 16 18 23" fill="none" stroke="#111" stroke-width="2"/>
@@ -192,7 +232,7 @@
           <div><b>Racional</b></div>
         </div>
 
-        <div class="btn" data-kind="sqrt" id="btn-sqrt">
+        <div class="btn" data-kind="sqrt">
           <div class="icon">
             <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M6 22 L14 22 L18 26 L22 10 L40 10" fill="none" stroke="#111" stroke-width="2"/>
@@ -202,7 +242,7 @@
           <div><b>Raíz</b></div>
         </div>
 
-        <div class="btn" data-kind="abs" id="btn-abs">
+        <div class="btn" data-kind="abs">
           <div class="icon">
             <svg width="46" height="30" viewBox="0 0 46 30" aria-hidden="true">
               <path d="M6 24 L23 8 L40 24" fill="none" stroke="#111" stroke-width="2"/>
@@ -224,8 +264,7 @@
       </div>
 
       <div class="hint">
-        Arrastra el punto naranja (h,k) para mover la gráfica. <br/>
-        <b>Solo enteros</b>. Plano <b>fijo</b>.
+        Arrastra el punto naranja (h,k). <b>Solo enteros</b>. Plano <b>fijo</b>.
       </div>
 
       <p id="result" class="msg"></p>
@@ -233,9 +272,6 @@
 
     <!-- COLUMNA PRINCIPAL -->
     <div class="mainCol">
-      <!-- Botón visible solo en celular -->
-      <button id="togglePanel" class="toggleBtn" type="button">📌 Elegir gráfica / Controles</button>
-
       <div id="box"></div>
 
       <div class="equationWrap">
@@ -247,7 +283,7 @@
   </div>
 
 <script>
-  // ========= OPCIONES GLOBALES para quitar barra/branding =========
+  // ========= OPCIONES GLOBALES =========
   JXG.Options.board.showNavigation = false;
   JXG.Options.board.showCopyright = false;
 
@@ -255,7 +291,7 @@
   const FIXED_BB = [-10, 10, 10, -10];
   const boxEl = document.getElementById('box');
 
-  // Evita zoom scroll del navegador dentro del plano
+  // Evita zoom/scroll dentro del plano
   boxEl.addEventListener('wheel', (e) => e.preventDefault(), { passive:false });
   boxEl.addEventListener('touchmove', (e) => e.preventDefault(), { passive:false });
 
@@ -272,20 +308,13 @@
     resize: { enabled: false }
   });
 
-  function lockView() {
-    board.setBoundingBox(FIXED_BB, true);
-  }
+  function lockView() { board.setBoundingBox(FIXED_BB, true); }
   board.on('update', lockView);
   lockView();
 
-  // Ejes + ticks 1 en 1 + cuadrícula 1 en 1
   board.suspendUpdate();
-  board.create('axis', [[0,0],[1,0]], {
-    ticks: { ticksDistance: 1, minorTicks: 0, drawLabels: true }
-  });
-  board.create('axis', [[0,0],[0,1]], {
-    ticks: { ticksDistance: 1, minorTicks: 0, drawLabels: true }
-  });
+  board.create('axis', [[0,0],[1,0]], { ticks: { ticksDistance: 1, minorTicks: 0, drawLabels: true }});
+  board.create('axis', [[0,0],[0,1]], { ticks: { ticksDistance: 1, minorTicks: 0, drawLabels: true }});
   board.create('grid', [], { gridX: 1, gridY: 1 });
   board.unsuspendUpdate();
   lockView();
@@ -307,14 +336,13 @@
   let selectedKind = null;
   let curve = null;
 
-  // Objetivo aleatorio
   let targetKind = null;
   let targetH = 0;
   let targetK = 0;
   let targetFlipX = false;
   let targetFlipY = false;
 
-  // ========= HANDLE (h,k) SOLO ENTEROS =========
+  // ========= HANDLE ENTERO =========
   const handle = board.create('point', [0, 0], {
     name: '',
     size: 4,
@@ -336,7 +364,7 @@
     () => `h=${handle.X()}, k=${handle.Y()}`
   ], { fontSize: 14 });
 
-  // ========= g(x) DEL ALUMNO =========
+  // ========= g(x) ALUMNO =========
   function studentG(x){
     if (!selectedKind) return NaN;
 
@@ -405,10 +433,7 @@
   function renderLatexEquation(){
     const eqDiv = document.getElementById("eqBig");
     eqDiv.innerHTML = buildEquationLatex(targetKind, targetH, targetK, targetFlipX, targetFlipY);
-
-    if (window.MathJax && MathJax.typesetPromise) {
-      MathJax.typesetPromise([eqDiv]);
-    }
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([eqDiv]);
   }
 
   // ========= EJERCICIO ALEATORIO =========
@@ -432,7 +457,7 @@
     setMsg("Nuevo ejercicio ✅ Elige la familia correcta y luego aplica (h,k) y reflexiones.", "");
   }
 
-  // ========= OBJETIVO PARA CALIFICAR =========
+  // ========= OBJETIVO =========
   function targetG(x){
     const sx = targetFlipX ? -1 : 1;
     const sy = targetFlipY ? -1 : 1;
@@ -445,12 +470,11 @@
   // ========= CALIFICAR =========
   document.getElementById("check").addEventListener("click", () => {
     if (!selectedKind){
-      setMsg("❌ Primero elige una mini-gráfica del lado izquierdo.", "bad");
+      setMsg("❌ Primero elige una mini-gráfica.", "bad");
       return;
     }
-
     if (selectedKind !== targetKind){
-      setMsg("❌ Incorrecto: elegiste la familia equivocada.", "bad");
+      setMsg("❌ Incorrecto: familia equivocada.", "bad");
       return;
     }
 
@@ -464,7 +488,7 @@
       if (!Number.isFinite(yS) || !Number.isFinite(yT)) continue;
       checked++;
       if (Math.abs(yS - yT) > tol){
-        setMsg("❌ Incorrecto: la transformación no coincide.", "bad");
+        setMsg("❌ Incorrecto: no coincide la transformación.", "bad");
         return;
       }
     }
@@ -477,7 +501,7 @@
     setMsg("✅ Correcto.", "ok");
   });
 
-  // ========= UI =========
+  // ========= UI: seleccionar familia =========
   document.querySelectorAll(".btn").forEach(btn => {
     btn.addEventListener("click", () => {
       clearSelectionUI();
@@ -485,62 +509,100 @@
       selectedKind = btn.dataset.kind;
       resetStudent();
       renderCurve();
-      setMsg("Listo. Ahora aplica traslación (h,k) y reflexiones.", "");
-
-      // En celular: al elegir la familia, cerramos el panel para volver al plano
-      if (window.matchMedia("(max-width: 900px)").matches) {
-        sidePanel.classList.remove("open");
-        setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 50);
-      }
+      setMsg("Listo. Aplica traslación (h,k) y reflexiones.", "");
+      if (isMobile()) closeDrawer(); // en móvil, cierra al elegir
     });
   });
 
   document.getElementById("reset").addEventListener("click", resetStudent);
   document.getElementById("new").addEventListener("click", () => {
     newExercise();
-    // En celular: al crear ejercicio, cierra panel (modo app)
-    if (window.matchMedia("(max-width: 900px)").matches) {
-      sidePanel.classList.remove("open");
-      setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 50);
-    }
+    if (isMobile()) closeDrawer();
   });
 
   document.getElementById("flipX").addEventListener("change", () => { renderCurve(); lockView(); });
   document.getElementById("flipY").addEventListener("change", () => { renderCurve(); lockView(); });
 
-  // ========= MODO APP (PANEL PLEGABLE) =========
-  const toggleBtn = document.getElementById("togglePanel");
+  // ========= DRAWER DESLIZABLE =========
   const sidePanel = document.getElementById("sidePanel");
+  const backdrop = document.getElementById("drawerBackdrop");
+  const edgeZone = document.getElementById("edgeSwipeZone");
 
-  function isMobile() {
-    return window.matchMedia("(max-width: 900px)").matches;
+  function isMobile(){ return window.matchMedia("(max-width: 900px)").matches; }
+
+  function openDrawer(){
+    if (!isMobile()) return;
+    sidePanel.classList.add("open");
+    backdrop.classList.add("show");
+    setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 50);
   }
 
-  function syncPanel() {
-    if (isMobile()) {
-      toggleBtn.style.display = "block";
-      sidePanel.classList.remove("open"); // cerrado por defecto en celular
+  function closeDrawer(){
+    sidePanel.classList.remove("open");
+    backdrop.classList.remove("show");
+    setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 50);
+  }
+
+  function syncDrawer(){
+    if (!isMobile()){
+      sidePanel.classList.add("open");
+      backdrop.classList.remove("show");
     } else {
-      toggleBtn.style.display = "none";
-      sidePanel.classList.add("open");    // siempre visible en escritorio
+      closeDrawer(); // cerrado por defecto en móvil
     }
-
-    setTimeout(() => {
-      try { lockView(); board.update(); } catch(e) {}
-    }, 50);
+    setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 50);
   }
 
-  toggleBtn.addEventListener("click", () => {
-    sidePanel.classList.toggle("open");
-    setTimeout(() => {
-      try { lockView(); board.update(); } catch(e) {}
-    }, 50);
-  });
+  backdrop.addEventListener("click", closeDrawer);
+  window.addEventListener("resize", syncDrawer);
 
-  window.addEventListener("resize", syncPanel);
+  // Swipe detection
+  let startX = null, startY = null, tracking = false;
+
+  // Abrir desde borde
+  edgeZone.addEventListener("touchstart", (e)=>{
+    if (!isMobile()) return;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    tracking = true;
+  }, {passive:true});
+
+  edgeZone.addEventListener("touchmove", (e)=>{
+    if (!tracking || !isMobile()) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = Math.abs(t.clientY - startY);
+    if (dx > 35 && dy < 30){
+      openDrawer();
+      tracking = false;
+    }
+  }, {passive:true});
+
+  edgeZone.addEventListener("touchend", ()=>{ tracking = false; }, {passive:true});
+
+  // Cerrar con swipe dentro del panel
+  sidePanel.addEventListener("touchstart", (e)=>{
+    if (!isMobile()) return;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    tracking = true;
+  }, {passive:true});
+
+  sidePanel.addEventListener("touchmove", (e)=>{
+    if (!tracking || !isMobile()) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = Math.abs(t.clientY - startY);
+    if (dx < -45 && dy < 35){
+      closeDrawer();
+      tracking = false;
+    }
+  }, {passive:true});
+
+  sidePanel.addEventListener("touchend", ()=>{ tracking = false; }, {passive:true});
 
   // ========= ARRANQUE =========
-  syncPanel();
+  syncDrawer();
   newExercise();
 </script>
 </body>
