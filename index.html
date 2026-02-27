@@ -101,7 +101,7 @@
       font-size: 13px;
     }
 
-    /* ===== DRAWER (celular) ===== */
+    /* ===== Drawer (celular) ===== */
     .drawerBackdrop{
       display:none;
       position: fixed;
@@ -111,20 +111,43 @@
     }
     .drawerBackdrop.show{ display:block; }
 
-    /* Zona invisible en el borde para empezar el arrastre */
+    /* borde sensible (invisible) para swipe */
     .edgeSwipeZone{
       display:none;
       position: fixed;
       left: 0;
       top: 0;
-      width: 22px;
+      width: 24px;
       height: 100dvh;
       z-index: 9997;
       background: transparent;
-      touch-action: pan-y; /* permite scroll vertical normal */
+      touch-action: none;
     }
 
-    /* Manija visible (zona de arrastre) */
+    /* pestañita visible para abrir (no se traba) */
+    .drawerTab{
+      display:none;
+      position: fixed;
+      left: 0;
+      top: 45%;
+      width: 28px;
+      height: 86px;
+      z-index: 9997;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-left: none;
+      border-radius: 0 14px 14px 0;
+      box-shadow: 0 8px 18px rgba(0,0,0,.12);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+      color: #111;
+      user-select:none;
+      touch-action: none;
+    }
+
+    /* manija dentro del panel */
     .drawerHandle{
       display:none;
       width: 64px;
@@ -132,20 +155,18 @@
       border-radius: 999px;
       margin: 8px auto 10px auto;
       background: #d1d5db;
-      touch-action: none; /* IMPORTANTÍSIMO: el gesto es nuestro */
+      touch-action: none;
     }
 
     @media (max-width: 900px){
       body{ padding:10px; }
-
-      .layout{
-        grid-template-columns: 1fr;
-        gap: 10px;
-      }
+      .layout{ grid-template-columns: 1fr; gap:10px; }
 
       .edgeSwipeZone{ display:block; }
+      .drawerTab{ display:flex; }
       .drawerHandle{ display:block; }
 
+      /* panel como drawer */
       #sidePanel{
         display:block;
         position: fixed;
@@ -162,13 +183,11 @@
         border-radius: 0 14px 14px 0;
         box-shadow: 0 10px 30px rgba(0,0,0,.18);
 
-        /* Clave para evitar “trabas” */
+        /* clave: permite scroll vertical dentro del panel */
         touch-action: pan-y;
       }
 
-      #sidePanel.open{
-        transform: translateX(0);
-      }
+      #sidePanel.open{ transform: translateX(0); }
 
       #box{
         height: 62vh;
@@ -189,6 +208,7 @@
 
   <div class="drawerBackdrop" id="drawerBackdrop"></div>
   <div class="edgeSwipeZone" id="edgeSwipeZone"></div>
+  <div class="drawerTab" id="drawerTab" aria-label="Abrir controles">≡</div>
 
   <div class="layout">
     <!-- PANEL IZQUIERDO (drawer en móvil) -->
@@ -196,7 +216,7 @@
       <div class="drawerHandle" id="drawerHandle" aria-hidden="true"></div>
 
       <b>Selecciona una gráfica</b>
-      <div class="small">En celular: desliza desde el borde izquierdo o desde la manija.</div>
+      <div class="small">En celular: desliza desde el borde o toca la pestaña ≡.</div>
 
       <div class="thumb">
         <div class="btn" data-kind="x2">
@@ -285,6 +305,7 @@
   // ========= Tablero fijo =========
   const FIXED_BB = [-10, 10, 10, -10];
   const boxEl = document.getElementById('box');
+
   boxEl.addEventListener('wheel', (e) => e.preventDefault(), { passive:false });
   boxEl.addEventListener('touchmove', (e) => e.preventDefault(), { passive:false });
 
@@ -460,6 +481,120 @@
     setMsg("✅ Correcto.", "ok");
   });
 
+  // ========= Drawer robusto (solo tab/edge/handle arrastran) =========
+  const sidePanel = document.getElementById("sidePanel");
+  const backdrop = document.getElementById("drawerBackdrop");
+  const edgeZone = document.getElementById("edgeSwipeZone");
+  const tab = document.getElementById("drawerTab");
+  const handleBar = document.getElementById("drawerHandle");
+
+  function isMobile(){ return window.matchMedia("(max-width: 900px)").matches; }
+
+  function openDrawer(){
+    if (!isMobile()) return;
+    sidePanel.classList.add("open");
+    backdrop.classList.add("show");
+    tab.style.display = "none";
+    setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 60);
+  }
+
+  function closeDrawer(){
+    sidePanel.classList.remove("open");
+    backdrop.classList.remove("show");
+    tab.style.display = ""; // vuelve por CSS
+    setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 60);
+  }
+
+  function syncDrawer(){
+    if (!isMobile()){
+      sidePanel.classList.add("open");
+      backdrop.classList.remove("show");
+      tab.style.display = "none";
+    } else {
+      closeDrawer();
+      tab.style.display = ""; // visible
+    }
+    setTimeout(() => { try { lockView(); board.update(); } catch(e){} }, 60);
+  }
+
+  backdrop.addEventListener("click", closeDrawer);
+  window.addEventListener("resize", syncDrawer);
+
+  // Arrastre real SOLO desde edge/tab/handle
+  let dragging=false, startX=0, startT=0, panelW=0;
+
+  function beginDrag(clientX){
+    panelW = sidePanel.getBoundingClientRect().width;
+    dragging = true;
+    startX = clientX;
+    const isOpen = sidePanel.classList.contains("open");
+    startT = isOpen ? 0 : -panelW;
+    sidePanel.style.transition = "none";
+  }
+
+  function moveDrag(clientX){
+    if (!dragging) return;
+    const dx = clientX - startX;
+    let t = startT + dx;
+    t = Math.min(0, Math.max(-panelW, t));
+    sidePanel.style.transform = `translateX(${t}px)`;
+
+    const openness = 1 - Math.abs(t)/panelW; // 0..1
+    backdrop.style.display = "block";
+    backdrop.style.background = `rgba(0,0,0,${0.25*openness})`;
+    backdrop.classList.add("show");
+    tab.style.display = "none";
+  }
+
+  function endDrag(){
+    if (!dragging) return;
+    dragging = false;
+    sidePanel.style.transition = "";
+
+    const m = sidePanel.style.transform.match(/translateX\(([-0-9.]+)px\)/);
+    const t = m ? parseFloat(m[1]) : (sidePanel.classList.contains("open") ? 0 : -panelW);
+    const shouldOpen = t > -panelW/2;
+
+    sidePanel.style.transform = ""; // regresa al CSS (open/close)
+
+    if (shouldOpen) openDrawer();
+    else closeDrawer();
+
+    backdrop.style.background = "";
+    backdrop.style.display = "";
+  }
+
+  function attachDrag(el){
+    el.addEventListener("pointerdown", (e)=>{
+      if (!isMobile()) return;
+      beginDrag(e.clientX);
+      el.setPointerCapture(e.pointerId);
+    }, {passive:true});
+
+    el.addEventListener("pointermove", (e)=>{
+      if (!isMobile() || !dragging) return;
+      e.preventDefault();
+      moveDrag(e.clientX);
+    }, {passive:false});
+
+    el.addEventListener("pointerup", ()=>{
+      if (!isMobile()) return;
+      endDrag();
+    }, {passive:true});
+
+    el.addEventListener("pointercancel", ()=>{
+      if (!isMobile()) return;
+      endDrag();
+    }, {passive:true});
+  }
+
+  attachDrag(edgeZone);
+  attachDrag(tab);
+  attachDrag(handleBar);
+
+  // Tap rápido en la pestaña para abrir (sin swipe)
+  tab.addEventListener("click", ()=>{ if (isMobile()) openDrawer(); });
+
   // ========= UI selección =========
   document.querySelectorAll(".btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -469,7 +604,7 @@
       resetStudent();
       renderCurve();
       setMsg("Listo. Aplica traslación (h,k) y reflexiones.", "");
-      if (isMobile()) closeDrawer();
+      if (isMobile()) closeDrawer(); // en móvil, cierra al elegir
     });
   });
 
@@ -482,172 +617,7 @@
   document.getElementById("flipX").addEventListener("change", () => { renderCurve(); lockView(); });
   document.getElementById("flipY").addEventListener("change", () => { renderCurve(); lockView(); });
 
-  // ========= Drawer robusto (Pointer Events) =========
-  const sidePanel = document.getElementById("sidePanel");
-  const backdrop = document.getElementById("drawerBackdrop");
-  const edgeZone = document.getElementById("edgeSwipeZone");
-  const handleBar = document.getElementById("drawerHandle");
-
-  function isMobile(){ return window.matchMedia("(max-width: 900px)").matches; }
-
-  function openDrawer(){
-    if (!isMobile()) return;
-    sidePanel.classList.add("open");
-    backdrop.classList.add("show");
-    sidePanel.style.transform = "translateX(0px)";
-  }
-
-  function closeDrawer(){
-    sidePanel.classList.remove("open");
-    backdrop.classList.remove("show");
-    sidePanel.style.transform = ""; // vuelve al CSS (-102%)
-  }
-
-  function syncDrawer(){
-    if (!isMobile()){
-      sidePanel.classList.add("open");
-      backdrop.classList.remove("show");
-      sidePanel.style.transform = "translateX(0px)";
-    } else {
-      closeDrawer();
-    }
-    setTimeout(() => { try{ lockView(); board.update(); }catch(e){} }, 50);
-  }
-
-  backdrop.addEventListener("click", closeDrawer);
-  window.addEventListener("resize", syncDrawer);
-
-  // Drag real del drawer
-  let dragging=false, startX=0, startT=0, panelW=0;
-
-  function beginDrag(clientX){
-    panelW = sidePanel.getBoundingClientRect().width;
-    dragging = true;
-    startX = clientX;
-
-    // startT: posición actual (0 abierto, -panelW cerrado)
-    const isOpen = sidePanel.classList.contains("open");
-    startT = isOpen ? 0 : -panelW;
-    sidePanel.style.transition = "none";
-  }
-
-  function moveDrag(clientX){
-    if (!dragging) return;
-    const dx = clientX - startX;
-    let t = startT + dx;
-    t = Math.min(0, Math.max(-panelW, t)); // clamp
-    sidePanel.style.transform = `translateX(${t}px)`;
-
-    // backdrop progresivo
-    const openness = 1 - Math.abs(t)/panelW; // 0..1
-    backdrop.style.display = "block";
-    backdrop.style.background = `rgba(0,0,0,${0.25*openness})`;
-    backdrop.classList.add("show");
-  }
-
-  function endDrag(){
-    if (!dragging) return;
-    dragging = false;
-    sidePanel.style.transition = "";
-
-    // decide open/close by final position
-    const m = sidePanel.style.transform.match(/translateX\(([-0-9.]+)px\)/);
-    const t = m ? parseFloat(m[1]) : (sidePanel.classList.contains("open") ? 0 : -panelW);
-
-    const shouldOpen = t > -panelW/2;
-    if (shouldOpen) {
-      sidePanel.classList.add("open");
-      sidePanel.style.transform = "translateX(0px)";
-      backdrop.style.background = "rgba(0,0,0,0.25)";
-      backdrop.classList.add("show");
-    } else {
-      closeDrawer();
-      backdrop.style.background = "";
-      backdrop.style.display = "";
-    }
-    setTimeout(() => { try{ lockView(); board.update(); }catch(e){} }, 50);
-  }
-
-  // Abrir: arrastre desde borde
-  edgeZone.addEventListener("pointerdown", (e)=>{
-    if (!isMobile()) return;
-    beginDrag(e.clientX);
-    edgeZone.setPointerCapture(e.pointerId);
-  }, {passive:true});
-
-  edgeZone.addEventListener("pointermove", (e)=>{
-    if (!isMobile()) return;
-    if (!dragging) return;
-    // cuando arrastras horizontal, evitamos scroll “raro”
-    e.preventDefault?.();
-    moveDrag(e.clientX);
-  }, {passive:false});
-
-  edgeZone.addEventListener("pointerup", (e)=>{
-    if (!isMobile()) return;
-    endDrag();
-  }, {passive:true});
-
-  edgeZone.addEventListener("pointercancel", (e)=>{
-    if (!isMobile()) return;
-    endDrag();
-  }, {passive:true});
-
-  // Cerrar/abrir: arrastre desde la manija
-  handleBar.addEventListener("pointerdown", (e)=>{
-    if (!isMobile()) return;
-    beginDrag(e.clientX);
-    handleBar.setPointerCapture(e.pointerId);
-  }, {passive:true});
-
-  handleBar.addEventListener("pointermove", (e)=>{
-    if (!isMobile()) return;
-    if (!dragging) return;
-    e.preventDefault?.();
-    moveDrag(e.clientX);
-  }, {passive:false});
-
-  handleBar.addEventListener("pointerup", (e)=>{
-    if (!isMobile()) return;
-    endDrag();
-  }, {passive:true});
-
-  handleBar.addEventListener("pointercancel", (e)=>{
-    if (!isMobile()) return;
-    endDrag();
-  }, {passive:true});
-
-  // También: si el panel está abierto, puedes “jalar” desde cualquier parte del panel a la izquierda para cerrarlo
-  sidePanel.addEventListener("pointerdown", (e)=>{
-    if (!isMobile()) return;
-    // solo si el panel está abierto y el gesto empieza cerca del borde derecho del panel? NO.
-    // aquí lo hacemos simple: si el usuario empieza el gesto y se va a la izquierda, se cierra.
-    beginDrag(e.clientX);
-    sidePanel.setPointerCapture(e.pointerId);
-  }, {passive:true});
-
-  sidePanel.addEventListener("pointermove", (e)=>{
-    if (!isMobile()) return;
-    if (!dragging) return;
-    // Ojo: dejamos scroll vertical normal, pero si arrastra horizontal, movemos drawer
-    const dx = Math.abs(e.clientX - startX);
-    if (dx > 6){
-      e.preventDefault?.();
-      moveDrag(e.clientX);
-    }
-  }, {passive:false});
-
-  sidePanel.addEventListener("pointerup", (e)=>{
-    if (!isMobile()) return;
-    endDrag();
-  }, {passive:true});
-
-  sidePanel.addEventListener("pointercancel", (e)=>{
-    if (!isMobile()) return;
-    endDrag();
-  }, {passive:true});
-
-  // ========= Arranque =========
+  // ========= ARRANQUE =========
   syncDrawer();
   newExercise();
 </script>
